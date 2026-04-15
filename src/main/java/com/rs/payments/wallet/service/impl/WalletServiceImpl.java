@@ -15,6 +15,8 @@ import java.math.BigDecimal;
 @Service
 public class WalletServiceImpl implements WalletService {
 
+    private static final BigDecimal INITIAL_BALANCE = BigDecimal.ZERO;
+
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
 
@@ -33,7 +35,7 @@ public class WalletServiceImpl implements WalletService {
         }
 
         Wallet wallet = new Wallet();
-        wallet.setBalance(BigDecimal.ZERO);
+        wallet.setBalance(INITIAL_BALANCE);
         wallet.setUser(user);
         user.setWallet(wallet);
 
