@@ -1,4 +1,4 @@
-package com.rs.payments.wallet.service.impl;
+package com.rs.payments.wallet.controller;
 
 import com.rs.payments.wallet.dto.TransferResponse;
 import com.rs.payments.wallet.exception.BadRequestException;
@@ -10,6 +10,8 @@ import com.rs.payments.wallet.model.Wallet;
 import com.rs.payments.wallet.repository.TransactionRepository;
 import com.rs.payments.wallet.repository.UserRepository;
 import com.rs.payments.wallet.repository.WalletRepository;
+import com.rs.payments.wallet.service.impl.WalletServiceImpl;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -160,7 +162,7 @@ class WalletServiceImplTransferTest {
     void getBalance_shouldReturnCurrentBalance() {
         when(walletRepository.findById(fromWalletId)).thenReturn(Optional.of(fromWallet));
 
-        BigDecimal balance = walletService.getBalance(fromWalletId);
+        BigDecimal balance = (BigDecimal) walletService.getBalance(fromWalletId);
 
         assertThat(balance).isEqualByComparingTo("200.00");
     }
