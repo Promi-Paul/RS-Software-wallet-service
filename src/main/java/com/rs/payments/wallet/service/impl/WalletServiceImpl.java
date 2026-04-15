@@ -26,7 +26,9 @@ public class WalletServiceImpl implements WalletService {
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
 
-    public WalletServiceImpl(UserRepository userRepository, WalletRepository walletRepository, TransactionRepository transactionRepository) {
+    public WalletServiceImpl(UserRepository userRepository,
+                             WalletRepository walletRepository,
+                             TransactionRepository transactionRepository) {
         this.userRepository = userRepository;
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
@@ -96,19 +98,15 @@ public class WalletServiceImpl implements WalletService {
         recordTransaction(fromWallet, amount, TransactionType.TRANSFER_OUT, "Transfer out to " + toWalletId);
         recordTransaction(toWallet, amount, TransactionType.TRANSFER_IN, "Transfer in from " + fromWalletId);
 
-        TransferResponse response = new TransferResponse();
-        response.setFromWalletId(fromWalletId);
-        response.setToWalletId(toWalletId);
-        response.setAmount(amount);
-        response.setStatus("COMPLETED");
-
-        return response;
+        return buildTransferResponse(fromWalletId, toWalletId, amount);
     }
 
     @Override
     public BigDecimal getBalance(UUID walletId) {
         return findWallet(walletId).getBalance();
     }
+
+    // ── Private helpers ──────────────────────────────────────────────────────────
 
     private Wallet findWallet(UUID walletId) {
         return walletRepository.findById(walletId)
@@ -135,5 +133,14 @@ public class WalletServiceImpl implements WalletService {
         transaction.setTimestamp(LocalDateTime.now());
         transaction.setDescription(description);
         transactionRepository.save(transaction);
+    }
+
+    private TransferResponse buildTransferResponse(UUID fromWalletId, UUID toWalletId, BigDecimal amount) {
+        TransferResponse response = new TransferResponse();
+        response.setFromWalletId(fromWalletId);
+        response.setToWalletId(toWalletId);
+        response.setAmount(amount);
+        response.setStatus("COMPLETED");
+        return response;
     }
 }
