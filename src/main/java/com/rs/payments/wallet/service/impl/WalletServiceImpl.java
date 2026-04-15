@@ -46,7 +46,7 @@ public class WalletServiceImpl implements WalletService {
         wallet.setUser(user);
         user.setWallet(wallet);
 
-        user = userRepository.save(user); // Cascade saves wallet
+        user = userRepository.save(user);
         return user.getWallet();
     }
 
@@ -63,28 +63,6 @@ public class WalletServiceImpl implements WalletService {
         return wallet;
     }
 
-    private Wallet findWallet(UUID walletId) {
-        return walletRepository.findById(walletId)
-                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found"));
-    }
-
-    private void validateAmount(BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BadRequestException("Amount must be greater than 0");
-        }
-    }
-
-    private void recordTransaction(Wallet wallet, BigDecimal amount, TransactionType type, String description) {
-        Transaction transaction = new Transaction();
-        transaction.setWallet(wallet);
-        transaction.setAmount(amount);
-        transaction.setType(type);
-        transaction.setTimestamp(LocalDateTime.now());
-        transaction.setDescription(description);
-
-        transactionRepository.save(transaction);
-    }
-
     @Override
     @Transactional
     public Wallet withdraw(UUID walletId, BigDecimal amount) {
@@ -99,27 +77,15 @@ public class WalletServiceImpl implements WalletService {
         return wallet;
     }
 
-    private void validateSufficientBalance(Wallet wallet, BigDecimal amount) {
-        if (wallet.getBalance().compareTo(amount) < 0) {
-            throw new BadRequestException("Insufficient funds");
-        }
-    }
-
     @Override
     @Transactional
     public TransferResponse transfer(UUID fromWalletId, UUID toWalletId, BigDecimal amount) {
         validateAmount(amount);
-        if (fromWalletId == null || toWalletId == null) {
-            throw new BadRequestException("Both source and destination wallet IDs are required");
-        }
-        if (fromWalletId.equals(toWalletId)) {
-            throw new BadRequestException("Source and destination wallet must differ");
-        }
 
         Wallet fromWallet = findWallet(fromWalletId);
-        validateSufficientBalance(fromWallet, amount);
-
         Wallet toWallet = findWallet(toWalletId);
+
+        validateSufficientBalance(fromWallet, amount);
 
         fromWallet.setBalance(fromWallet.getBalance().subtract(amount));
         toWallet.setBalance(toWallet.getBalance().add(amount));
@@ -127,10 +93,8 @@ public class WalletServiceImpl implements WalletService {
         walletRepository.save(fromWallet);
         walletRepository.save(toWallet);
 
-        recordTransaction(fromWallet, amount, TransactionType.TRANSFER_OUT,
-                "Transfer to wallet " + toWalletId);
-        recordTransaction(toWallet, amount, TransactionType.TRANSFER_IN,
-                "Transfer from wallet " + fromWalletId);
+        recordTransaction(fromWallet, amount, TransactionType.TRANSFER_OUT, "Transfer out to " + toWalletId);
+        recordTransaction(toWallet, amount, TransactionType.TRANSFER_IN, "Transfer in from " + fromWalletId);
 
         TransferResponse response = new TransferResponse();
         response.setFromWalletId(fromWalletId);
@@ -139,5 +103,37 @@ public class WalletServiceImpl implements WalletService {
         response.setStatus("COMPLETED");
 
         return response;
+    }
+
+    @Override
+    public BigDecimal getBalance(UUID walletId) {
+        return findWallet(walletId).getBalance();
+    }
+
+    private Wallet findWallet(UUID walletId) {
+        return walletRepository.findById(walletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found"));
+    }
+
+    private void validateAmount(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Amount must be greater than 0");
+        }
+    }
+
+    private void validateSufficientBalance(Wallet wallet, BigDecimal amount) {
+        if (wallet.getBalance().compareTo(amount) < 0) {
+            throw new BadRequestException("Insufficient funds");
+        }
+    }
+
+    private void recordTransaction(Wallet wallet, BigDecimal amount, TransactionType type, String description) {
+        Transaction transaction = new Transaction();
+        transaction.setWallet(wallet);
+        transaction.setAmount(amount);
+        transaction.setType(type);
+        transaction.setTimestamp(LocalDateTime.now());
+        transaction.setDescription(description);
+        transactionRepository.save(transaction);
     }
 }
