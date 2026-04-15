@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,9 +32,13 @@ public class WalletController {
             description = "Creates a new wallet for the specified user ID with a zero balance.",
             responses = {
                     @ApiResponse(
-                            responseCode = "200",
+                            responseCode = "201",
                             description = "Wallet created successfully",
                             content = @Content(schema = @Schema(implementation = Wallet.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "User already has a wallet"
                     ),
                     @ApiResponse(
                             responseCode = "404",
@@ -44,6 +49,6 @@ public class WalletController {
     @PostMapping
     public ResponseEntity<Wallet> createWallet(@Valid @RequestBody CreateWalletRequest request) {
         Wallet wallet = walletService.createWalletForUser(request.getUserId());
-        return ResponseEntity.ok(wallet);
+        return ResponseEntity.status(HttpStatus.CREATED).body(wallet);
     }
 }

@@ -1,5 +1,6 @@
 package com.rs.payments.wallet.service.impl;
 
+import com.rs.payments.wallet.exception.BadRequestException;
 import com.rs.payments.wallet.exception.ResourceNotFoundException;
 import com.rs.payments.wallet.model.User;
 import com.rs.payments.wallet.model.Wallet;
@@ -26,6 +27,10 @@ public class WalletServiceImpl implements WalletService {
     public Wallet createWalletForUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getWallet() != null) {
+            throw new BadRequestException("User already has a wallet");
+        }
 
         Wallet wallet = new Wallet();
         wallet.setBalance(BigDecimal.ZERO);
