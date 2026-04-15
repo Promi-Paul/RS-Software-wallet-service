@@ -106,6 +106,38 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public TransferResponse transfer(UUID fromWalletId, UUID toWalletId, BigDecimal amount) {
-        throw new UnsupportedOperationException("Transfer functionality not implemented yet");
+        validateAmount(amount);
+        if (fromWalletId == null || toWalletId == null) {
+            throw new BadRequestException("Both source and destination wallet IDs are required");
+        }
+        if (fromWalletId.equals(toWalletId)) {
+            throw new BadRequestException("Source and destination wallet must differ");
+        }
+
+        Wallet fromWallet = findWallet(fromWalletId);
+        validateSufficientBalance(fromWallet, amount);
+
+        Wallet toWallet = findWallet(toWalletId);
+
+        fromWallet.setBalance(fromWallet.getBalance().subtract(amount));
+        toWallet.setBalance(toWallet.getBalance().add(amount));
+
+        walletRepository.save(fromWallet);
+        walletRepository.save(toWallet);
+
+        recordTransaction(fromWallet, amount, TransactionType.TRANSFER_OUT,
+                "Transfer to wallet " + toWalletId);
+        recordTransaction(toWallet, amount, TransactionType.TRANSFER_IN,
+                "Transfer from wallet " + fromWalletId);
+
+        TransferResponse response = new TransferResponse();
+        response.setFromWalletId(fromWalletId);
+        response.setToWalletId(toWalletId);
+        response.setAmount(amount);
+        response.setStatus("COMPLETED");
+
+        return response;
     }
+}
