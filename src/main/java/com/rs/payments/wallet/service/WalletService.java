@@ -5,4 +5,5 @@ import com.rs.payments.wallet.model.Wallet;
 
 public interface WalletService {
     Wallet createWalletForUser(UUID userId);
+    Wallet deposit(UUID walletId, java.math.BigDecimal amount);
 }

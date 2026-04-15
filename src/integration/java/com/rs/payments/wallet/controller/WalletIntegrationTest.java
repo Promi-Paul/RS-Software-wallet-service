@@ -3,6 +3,7 @@ package com.rs.payments.wallet.controller;
 import java.util.UUID;
 import com.rs.payments.wallet.BaseIntegrationTest;
 import com.rs.payments.wallet.dto.CreateWalletRequest;
+import com.rs.payments.wallet.dto.DepositRequest;
 import com.rs.payments.wallet.model.User;
 import com.rs.payments.wallet.model.Wallet;
 import com.rs.payments.wallet.repository.UserRepository;
@@ -77,6 +78,69 @@ class WalletIntegrationTest extends BaseIntegrationTest {
             restTemplate.postForEntity(url, request2, String.class);
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Test
+    void shouldDepositFundsSuccessfully() {
+        User user = new User();
+        user.setUsername("deposituser");
+        user.setEmail("deposit@example.com");
+        user = userRepository.save(user);
+
+        // Create wallet
+        CreateWalletRequest createRequest = new CreateWalletRequest();
+        createRequest.setUserId(user.getId());
+        ResponseEntity<Wallet> createResponse = restTemplate.postForEntity("http://localhost:" + port + "/wallets", createRequest, Wallet.class);
+        Wallet wallet = createResponse.getBody();
+
+        // Deposit funds
+        DepositRequest depositRequest = new DepositRequest();
+        depositRequest.setAmount(new BigDecimal("100.50"));
+
+        String depositUrl = "http://localhost:" + port + "/wallets/" + wallet.getId() + "/deposit";
+        ResponseEntity<Wallet> depositResponse = restTemplate.postForEntity(depositUrl, depositRequest, Wallet.class);
+
+        assertThat(depositResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(depositResponse.getBody()).isNotNull();
+        assertThat(depositResponse.getBody().getBalance()).isEqualTo(new BigDecimal("100.50"));
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidDepositAmount() {
+        User user = new User();
+        user.setUsername("invaliddeposituser");
+        user.setEmail("invaliddeposit@example.com");
+        user = userRepository.save(user);
+
+        // Create wallet
+        CreateWalletRequest createRequest = new CreateWalletRequest();
+        createRequest.setUserId(user.getId());
+        ResponseEntity<Wallet> createResponse = restTemplate.postForEntity("http://localhost:" + port + "/wallets", createRequest, Wallet.class);
+        Wallet wallet = createResponse.getBody();
+
+        // Try to deposit invalid amount
+        DepositRequest depositRequest = new DepositRequest();
+        depositRequest.setAmount(new BigDecimal("-50.00"));
+
+        String depositUrl = "http://localhost:" + port + "/wallets/" + wallet.getId() + "/deposit";
+        try {
+            restTemplate.postForEntity(depositUrl, depositRequest, String.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Test
+    void shouldReturnNotFoundForNonExistentWalletDeposit() {
+        DepositRequest depositRequest = new DepositRequest();
+        depositRequest.setAmount(new BigDecimal("100.00"));
+
+        String depositUrl = "http://localhost:" + port + "/wallets/" + UUID.randomUUID() + "/deposit";
+        try {
+            restTemplate.postForEntity(depositUrl, depositRequest, String.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 }

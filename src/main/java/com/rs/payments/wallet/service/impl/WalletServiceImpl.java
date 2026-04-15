@@ -42,4 +42,9 @@ public class WalletServiceImpl implements WalletService {
         user = userRepository.save(user); // Cascade saves wallet
         return user.getWallet();
     }
+
+    @Override
+    public Wallet deposit(UUID walletId, java.math.BigDecimal amount) {
+        throw new UnsupportedOperationException("Deposit functionality not implemented yet");
+    }
 }
