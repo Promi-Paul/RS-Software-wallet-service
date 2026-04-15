@@ -53,11 +53,11 @@ public class WalletServiceImpl implements WalletService {
     @Transactional
     public Wallet deposit(UUID walletId, BigDecimal amount) {
         Wallet wallet = findWallet(walletId);
-        validateDepositAmount(amount);
+        validateAmount(amount);
 
         wallet.setBalance(wallet.getBalance().add(amount));
         wallet = walletRepository.save(wallet);
-        recordDepositTransaction(wallet, amount);
+        recordTransaction(wallet, amount, TransactionType.DEPOSIT, "Deposit");
 
         return wallet;
     }
@@ -67,19 +67,19 @@ public class WalletServiceImpl implements WalletService {
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet not found"));
     }
 
-    private void validateDepositAmount(BigDecimal amount) {
+    private void validateAmount(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("Amount must be greater than 0");
         }
     }
 
-    private void recordDepositTransaction(Wallet wallet, BigDecimal amount) {
+    private void recordTransaction(Wallet wallet, BigDecimal amount, TransactionType type, String description) {
         Transaction transaction = new Transaction();
         transaction.setWallet(wallet);
         transaction.setAmount(amount);
-        transaction.setType(TransactionType.DEPOSIT);
+        transaction.setType(type);
         transaction.setTimestamp(LocalDateTime.now());
-        transaction.setDescription("Deposit");
+        transaction.setDescription(description);
 
         transactionRepository.save(transaction);
     }
@@ -88,12 +88,12 @@ public class WalletServiceImpl implements WalletService {
     @Transactional
     public Wallet withdraw(UUID walletId, BigDecimal amount) {
         Wallet wallet = findWallet(walletId);
-        validateDepositAmount(amount);
+        validateAmount(amount);
         validateSufficientBalance(wallet, amount);
 
         wallet.setBalance(wallet.getBalance().subtract(amount));
         wallet = walletRepository.save(wallet);
-        recordWithdrawalTransaction(wallet, amount);
+        recordTransaction(wallet, amount, TransactionType.WITHDRAWAL, "Withdrawal");
 
         return wallet;
     }
@@ -103,15 +103,3 @@ public class WalletServiceImpl implements WalletService {
             throw new BadRequestException("Insufficient funds");
         }
     }
-
-    private void recordWithdrawalTransaction(Wallet wallet, BigDecimal amount) {
-        Transaction transaction = new Transaction();
-        transaction.setWallet(wallet);
-        transaction.setAmount(amount);
-        transaction.setType(TransactionType.WITHDRAWAL);
-        transaction.setTimestamp(LocalDateTime.now());
-        transaction.setDescription("Withdrawal");
-
-        transactionRepository.save(transaction);
-    }
-}
