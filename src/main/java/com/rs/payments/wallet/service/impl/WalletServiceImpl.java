@@ -2,6 +2,7 @@ package com.rs.payments.wallet.service.impl;
 
 import com.rs.payments.wallet.exception.BadRequestException;
 import com.rs.payments.wallet.exception.ResourceNotFoundException;
+import com.rs.payments.wallet.dto.TransferResponse;
 import com.rs.payments.wallet.model.Transaction;
 import com.rs.payments.wallet.model.TransactionType;
 import com.rs.payments.wallet.model.User;
@@ -102,4 +103,9 @@ public class WalletServiceImpl implements WalletService {
         if (wallet.getBalance().compareTo(amount) < 0) {
             throw new BadRequestException("Insufficient funds");
         }
+    }
+
+    @Override
+    public TransferResponse transfer(UUID fromWalletId, UUID toWalletId, BigDecimal amount) {
+        throw new UnsupportedOperationException("Transfer functionality not implemented yet");
     }

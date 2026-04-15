@@ -1,5 +1,6 @@
 package com.rs.payments.wallet.service.impl;
 
+import com.rs.payments.wallet.dto.TransferResponse;
 import com.rs.payments.wallet.exception.BadRequestException;
 import com.rs.payments.wallet.exception.ResourceNotFoundException;
 import com.rs.payments.wallet.model.User;
@@ -138,6 +139,57 @@ class WalletServiceImplTest {
 
         assertThrows(BadRequestException.class, () -> walletService.withdraw(walletId, withdrawAmount));
         verify(walletRepository, times(1)).findById(walletId);
+        verify(walletRepository, never()).save(any());
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should transfer funds successfully")
+    void shouldTransferFundsSuccessfully() {
+        UUID fromWalletId = UUID.randomUUID();
+        UUID toWalletId = UUID.randomUUID();
+        BigDecimal transferAmount = new BigDecimal("50.00");
+
+        Wallet fromWallet = new Wallet();
+        fromWallet.setId(fromWalletId);
+        fromWallet.setBalance(new BigDecimal("200.00"));
+
+        Wallet toWallet = new Wallet();
+        toWallet.setId(toWalletId);
+        toWallet.setBalance(new BigDecimal("100.00"));
+
+        when(walletRepository.findById(fromWalletId)).thenReturn(Optional.of(fromWallet));
+        when(walletRepository.findById(toWalletId)).thenReturn(Optional.of(toWallet));
+        when(walletRepository.save(any(Wallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TransferResponse response = walletService.transfer(fromWalletId, toWalletId, transferAmount);
+
+        assertNotNull(response);
+        assertEquals(fromWalletId, response.getFromWalletId());
+        assertEquals(toWalletId, response.getToWalletId());
+        assertEquals(transferAmount, response.getAmount());
+        assertEquals("COMPLETED", response.getStatus());
+        verify(walletRepository, atLeastOnce()).findById(fromWalletId);
+        verify(walletRepository, atLeastOnce()).findById(toWalletId);
+        verify(transactionRepository, times(2)).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw bad request when transfer amount exceeds balance")
+    void shouldThrowBadRequestWhenTransferAmountExceedsBalance() {
+        UUID fromWalletId = UUID.randomUUID();
+        UUID toWalletId = UUID.randomUUID();
+        BigDecimal transferAmount = new BigDecimal("300.00");
+
+        Wallet fromWallet = new Wallet();
+        fromWallet.setId(fromWalletId);
+        fromWallet.setBalance(new BigDecimal("200.00"));
+
+        when(walletRepository.findById(fromWalletId)).thenReturn(Optional.of(fromWallet));
+
+        assertThrows(BadRequestException.class, () -> walletService.transfer(fromWalletId, toWalletId, transferAmount));
+        verify(walletRepository, times(1)).findById(fromWalletId);
         verify(walletRepository, never()).save(any());
         verify(transactionRepository, never()).save(any());
     }
