@@ -20,13 +20,13 @@ class UserIntegrationTest extends BaseIntegrationTest {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Test
-    void shouldCreateUser() {
+    void shouldCreateUserWithCreatedStatus() {
         CreateUserRequest request = new CreateUserRequest("testuser", "test@example.com");
 
         String url = "http://localhost:" + port + "/users";
         ResponseEntity<User> response = restTemplate.postForEntity(url, request, User.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isNotNull();
         assertThat(response.getBody().getUsername()).isEqualTo("testuser");
@@ -46,7 +46,7 @@ class UserIntegrationTest extends BaseIntegrationTest {
         String url = "http://localhost:" + port + "/users";
         ResponseEntity<User> response = restTemplate.postForEntity(url, entity, User.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isNotEqualTo(providedId);
         assertThat(response.getBody().getUsername()).isEqualTo("testuser2");
@@ -61,6 +61,36 @@ class UserIntegrationTest extends BaseIntegrationTest {
             restTemplate.postForEntity(url, request, User.class);
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Test
+    void shouldReturnConflictWhenDuplicateUsername() {
+        CreateUserRequest request1 = new CreateUserRequest("duplicateuser", "first@example.com");
+        CreateUserRequest request2 = new CreateUserRequest("duplicateuser", "second@example.com");
+
+        String url = "http://localhost:" + port + "/users";
+        restTemplate.postForEntity(url, request1, User.class);
+
+        try {
+            restTemplate.postForEntity(url, request2, User.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        }
+    }
+
+    @Test
+    void shouldReturnConflictWhenDuplicateEmail() {
+        CreateUserRequest request1 = new CreateUserRequest("user1", "duplicate@example.com");
+        CreateUserRequest request2 = new CreateUserRequest("user2", "duplicate@example.com");
+
+        String url = "http://localhost:" + port + "/users";
+        restTemplate.postForEntity(url, request1, User.class);
+
+        try {
+            restTemplate.postForEntity(url, request2, User.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         }
     }
 }

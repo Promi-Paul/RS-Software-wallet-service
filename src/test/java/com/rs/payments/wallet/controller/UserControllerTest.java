@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,8 +27,8 @@ class UserControllerTest {
     private UserController userController;
 
     @Test
-    @DisplayName("Should create user")
-    void shouldCreateUser() {
+    @DisplayName("Should create user with 201 Created status")
+    void shouldCreateUserWithCreatedStatus() {
         // Given
         CreateUserRequest request = new CreateUserRequest("testuser", "test@example.com");
 
@@ -38,7 +39,7 @@ class UserControllerTest {
         ResponseEntity<User> response = userController.createUser(request);
 
         // Then
-        assertEquals(200, response.getStatusCode().value());
+        assertEquals(HttpStatus.CREATED.value(), response.getStatusCode().value());
         assertEquals(createdUser, response.getBody());
         verify(userService, times(1)).createUser(any(User.class));
     }
