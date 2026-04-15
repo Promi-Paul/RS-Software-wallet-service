@@ -85,7 +85,33 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public Wallet withdraw(UUID walletId, BigDecimal amount) {
-        throw new UnsupportedOperationException("Withdraw functionality not implemented yet");
+        Wallet wallet = findWallet(walletId);
+        validateDepositAmount(amount);
+        validateSufficientBalance(wallet, amount);
+
+        wallet.setBalance(wallet.getBalance().subtract(amount));
+        wallet = walletRepository.save(wallet);
+        recordWithdrawalTransaction(wallet, amount);
+
+        return wallet;
+    }
+
+    private void validateSufficientBalance(Wallet wallet, BigDecimal amount) {
+        if (wallet.getBalance().compareTo(amount) < 0) {
+            throw new BadRequestException("Insufficient funds");
+        }
+    }
+
+    private void recordWithdrawalTransaction(Wallet wallet, BigDecimal amount) {
+        Transaction transaction = new Transaction();
+        transaction.setWallet(wallet);
+        transaction.setAmount(amount);
+        transaction.setType(TransactionType.WITHDRAWAL);
+        transaction.setTimestamp(LocalDateTime.now());
+        transaction.setDescription("Withdrawal");
+
+        transactionRepository.save(transaction);
     }
 }
