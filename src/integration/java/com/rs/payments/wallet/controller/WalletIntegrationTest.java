@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class WalletIntegrationTest extends BaseIntegrationTest {
@@ -22,7 +24,7 @@ class WalletIntegrationTest extends BaseIntegrationTest {
     private UserRepository userRepository;
 
     @Test
-    void shouldCreateWalletForExistingUser() {
+    void shouldCreateWalletForExistingUserWithCreatedStatus() {
         User user = new User();
         user.setUsername("walletuser");
         user.setEmail("wallet@example.com");
@@ -34,10 +36,11 @@ class WalletIntegrationTest extends BaseIntegrationTest {
         String url = "http://localhost:" + port + "/wallets";
         ResponseEntity<Wallet> response = restTemplate.postForEntity(url, request, Wallet.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isNotNull();
         assertThat(response.getBody().getUser().getId()).isEqualTo(user.getId());
+        assertThat(response.getBody().getBalance()).isEqualTo(BigDecimal.ZERO);
     }
 
     @Test
@@ -50,6 +53,30 @@ class WalletIntegrationTest extends BaseIntegrationTest {
             restTemplate.postForEntity(url, request, String.class);
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenUserAlreadyHasWallet() {
+        User user = new User();
+        user.setUsername("existingwalletuser");
+        user.setEmail("existing@example.com");
+        user = userRepository.save(user);
+
+        // Create first wallet
+        CreateWalletRequest request1 = new CreateWalletRequest();
+        request1.setUserId(user.getId());
+        restTemplate.postForEntity("http://localhost:" + port + "/wallets", request1, Wallet.class);
+
+        // Try to create second wallet for same user
+        CreateWalletRequest request2 = new CreateWalletRequest();
+        request2.setUserId(user.getId());
+
+        String url = "http://localhost:" + port + "/wallets";
+        try {
+            restTemplate.postForEntity(url, request2, String.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
 }

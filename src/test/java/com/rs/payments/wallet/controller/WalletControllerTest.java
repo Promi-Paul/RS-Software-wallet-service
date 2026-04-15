@@ -10,11 +10,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,8 +29,8 @@ class WalletControllerTest {
     private WalletController walletController;
 
     @Test
-    @DisplayName("Should create wallet")
-    void shouldCreateWallet() {
+    @DisplayName("Should create wallet with 201 Created status and zero balance")
+    void shouldCreateWalletWithCreatedStatus() {
         // Given
         UUID userId = UUID.randomUUID();
         UUID walletId = UUID.randomUUID();
@@ -45,8 +47,41 @@ class WalletControllerTest {
         ResponseEntity<Wallet> response = walletController.createWallet(request);
 
         // Then
-        assertEquals(200, response.getStatusCode().value());
+        assertEquals(HttpStatus.CREATED.value(), response.getStatusCode().value());
         assertEquals(wallet, response.getBody());
+        assertEquals(BigDecimal.ZERO, response.getBody().getBalance());
+        verify(walletService, times(1)).createWalletForUser(userId);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when user not found")
+    void shouldThrowExceptionWhenUserNotFound() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        CreateWalletRequest request = new CreateWalletRequest();
+        request.setUserId(userId);
+
+        when(walletService.createWalletForUser(userId))
+            .thenThrow(new RuntimeException("User not found"));
+
+        // When & Then
+        assertThrows(RuntimeException.class, () -> walletController.createWallet(request));
+        verify(walletService, times(1)).createWalletForUser(userId);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when user already has wallet")
+    void shouldThrowExceptionWhenUserAlreadyHasWallet() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        CreateWalletRequest request = new CreateWalletRequest();
+        request.setUserId(userId);
+
+        when(walletService.createWalletForUser(userId))
+            .thenThrow(new RuntimeException("User already has wallet"));
+
+        // When & Then
+        assertThrows(RuntimeException.class, () -> walletController.createWallet(request));
         verify(walletService, times(1)).createWalletForUser(userId);
     }
 }
