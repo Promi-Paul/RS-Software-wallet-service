@@ -83,4 +83,9 @@ public class WalletServiceImpl implements WalletService {
 
         transactionRepository.save(transaction);
     }
+
+    @Override
+    public Wallet withdraw(UUID walletId, BigDecimal amount) {
+        throw new UnsupportedOperationException("Withdraw functionality not implemented yet");
+    }
 }

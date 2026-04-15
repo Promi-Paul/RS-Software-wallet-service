@@ -2,6 +2,7 @@ package com.rs.payments.wallet.controller;
 
 import com.rs.payments.wallet.dto.CreateWalletRequest;
 import com.rs.payments.wallet.dto.DepositRequest;
+import com.rs.payments.wallet.dto.WithdrawRequest;
 import com.rs.payments.wallet.model.Wallet;
 import com.rs.payments.wallet.service.WalletService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,6 +78,31 @@ public class WalletController {
     @PostMapping("/{id}/deposit")
     public ResponseEntity<Wallet> deposit(@PathVariable UUID id, @Valid @RequestBody DepositRequest request) {
         Wallet wallet = walletService.deposit(id, request.getAmount());
+        return ResponseEntity.ok(wallet);
+    }
+
+    @Operation(
+            summary = "Withdraw funds from a wallet",
+            description = "Withdraws the specified amount from the wallet and creates a transaction record.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Withdrawal successful",
+                            content = @Content(schema = @Schema(implementation = Wallet.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid amount or insufficient funds"
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Wallet not found"
+                    )
+            }
+    )
+    @PostMapping("/{id}/withdraw")
+    public ResponseEntity<Wallet> withdraw(@PathVariable UUID id, @Valid @RequestBody WithdrawRequest request) {
+        Wallet wallet = walletService.withdraw(id, request.getAmount());
         return ResponseEntity.ok(wallet);
     }
 }

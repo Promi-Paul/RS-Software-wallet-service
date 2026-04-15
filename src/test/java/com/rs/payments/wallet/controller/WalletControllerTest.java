@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import com.rs.payments.wallet.dto.CreateWalletRequest;
 import com.rs.payments.wallet.dto.DepositRequest;
+import com.rs.payments.wallet.dto.WithdrawRequest;
 import com.rs.payments.wallet.exception.BadRequestException;
 import com.rs.payments.wallet.exception.ResourceNotFoundException;
 import com.rs.payments.wallet.model.Wallet;
@@ -154,4 +155,77 @@ class WalletControllerTest {
         assertThrows(BadRequestException.class, () -> walletController.deposit(walletId, request));
         verify(walletService, times(1)).deposit(walletId, invalidAmount);
     }
+
+    @Test
+    @DisplayName("Should withdraw funds successfully")
+    void shouldWithdrawFundsSuccessfully() {
+        UUID walletId = UUID.randomUUID();
+        BigDecimal withdrawAmount = new BigDecimal("30.00");
+        BigDecimal startingBalance = new BigDecimal("100.00");
+        BigDecimal expectedBalance = new BigDecimal("70.00");
+
+        WithdrawRequest request = new WithdrawRequest();
+        request.setAmount(withdrawAmount);
+
+        Wallet updatedWallet = new Wallet();
+        updatedWallet.setId(walletId);
+        updatedWallet.setBalance(expectedBalance);
+
+        when(walletService.withdraw(walletId, withdrawAmount)).thenReturn(updatedWallet);
+
+        ResponseEntity<Wallet> response = walletController.withdraw(walletId, request);
+
+        assertEquals(HttpStatus.OK.value(), response.getStatusCode().value());
+        assertEquals(expectedBalance, response.getBody().getBalance());
+        verify(walletService, times(1)).withdraw(walletId, withdrawAmount);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when wallet not found for withdraw")
+    void shouldThrowExceptionWhenWalletNotFoundForWithdraw() {
+        UUID walletId = UUID.randomUUID();
+        BigDecimal withdrawAmount = new BigDecimal("30.00");
+
+        WithdrawRequest request = new WithdrawRequest();
+        request.setAmount(withdrawAmount);
+
+        when(walletService.withdraw(walletId, withdrawAmount))
+                .thenThrow(new ResourceNotFoundException("Wallet not found"));
+
+        assertThrows(ResourceNotFoundException.class, () -> walletController.withdraw(walletId, request));
+        verify(walletService, times(1)).withdraw(walletId, withdrawAmount);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when withdraw amount is invalid")
+    void shouldThrowExceptionWhenWithdrawAmountIsInvalid() {
+        UUID walletId = UUID.randomUUID();
+        BigDecimal invalidAmount = new BigDecimal("-20.00");
+
+        WithdrawRequest request = new WithdrawRequest();
+        request.setAmount(invalidAmount);
+
+        when(walletService.withdraw(walletId, invalidAmount))
+                .thenThrow(new BadRequestException("Amount must be greater than 0"));
+
+        assertThrows(BadRequestException.class, () -> walletController.withdraw(walletId, request));
+        verify(walletService, times(1)).withdraw(walletId, invalidAmount);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when withdraw amount exceeds balance")
+    void shouldThrowExceptionWhenInsufficientFunds() {
+        UUID walletId = UUID.randomUUID();
+        BigDecimal withdrawAmount = new BigDecimal("200.00");
+
+        WithdrawRequest request = new WithdrawRequest();
+        request.setAmount(withdrawAmount);
+
+        when(walletService.withdraw(walletId, withdrawAmount))
+                .thenThrow(new BadRequestException("Insufficient funds"));
+
+        assertThrows(BadRequestException.class, () -> walletController.withdraw(walletId, request));
+        verify(walletService, times(1)).withdraw(walletId, withdrawAmount);
+    }
 }
+
